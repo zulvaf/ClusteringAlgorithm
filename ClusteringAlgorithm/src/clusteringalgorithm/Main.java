@@ -49,9 +49,9 @@ public class Main {
             } else if (option == 4) {
                 myWeka.chooseTestOption();
             } else if (option == 5) {
-                myWeka.startClassify();
+                myWeka.buildClusterer();
             } else if (option == 6) {
-                myWeka.startClassifyUnseen();
+                myWeka.startClusterUnseen();
             } else if (option == 7) {
                 myWeka.printDataSummary();
             } else if (option == 8) {

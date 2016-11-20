@@ -8,20 +8,13 @@ package clusteringalgorithm;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Random;
 import java.util.Scanner;
-import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
-import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.trees.Id3;
-import weka.classifiers.trees.J48;
 import weka.clusterers.ClusterEvaluation;
 import weka.clusterers.Clusterer;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.SerializationHelper;
 import weka.core.converters.ConverterUtils;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.Resample;
@@ -42,10 +35,7 @@ public class MyWeka {
     
     private int optCls = 1;
     private int optTest = 1;
-    private int folds = 0;
     private double percent;
-    private String confidence;
-    private String testFilename;
             
     public MyWeka () {
         // do nothing
@@ -57,18 +47,11 @@ public class MyWeka {
         BufferedReader reader = new BufferedReader(new FileReader(filename));
         data = new Instances(reader);
         reader.close();
-        
-        // setting class attribute
-        data.setClassIndex(data.numAttributes() - 1);
     }
     
     public void readFileCsv (String filename) throws Exception {
         ConverterUtils.DataSource source = new ConverterUtils.DataSource(filename);
         data = source.getDataSet();
-        
-        // setting class attribute
-        if (data.classIndex() == -1)
-            data.setClassIndex(data.numAttributes() - 1);
     }
     
     // ****************** Data Filter ****************** //
@@ -99,52 +82,36 @@ public class MyWeka {
     
     //****************** Clusterer Builder ******************//
     
-    public void buildClustererSimpleKMeans () throws Exception {
-        clusterer = new SimpleKMeans();
+    public void buildClustererSimpleKMeans() throws Exception {
+        clusterer = (SimpleKMeans) new SimpleKMeans();
         clusterer.buildClusterer(train);
     }
     
-    public void buildClustererMyKMeans () throws Exception {
-        /*
+    public void buildClustererMyKMeans() throws Exception {
+        System.out.println("cek cek");
         clusterer = new MyKMeans();
+        System.out.println("lolos");
         clusterer.buildClusterer(train);
-        */
     }
-    
-    /*
-    di KMeans ga ada evaluate Model, TODO remove this
+
+    public void buildClustererMyAgnes() throws Exception {
+        clusterer = new MyAgnes(data, 2, MyAgnes.SINGLE);
+        clusterer.buildClusterer(train);
+    }
     
     public void evaluateModel () throws Exception {
         eval = new ClusterEvaluation();
+        eval.setClusterer(clusterer);
         eval.evaluateClusterer(test);
-        Evaluation eval2 = new Evaluation(test);
     }
-    */
     
     //****************** Testing Option Setter ******************//
-    /* TODO fix this section, belum sesuai dengan clustering */
     
     public void fullTraining () {
         train = data;
         test = data;
     }
-    
-    public void setTestCase (String filename) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(filename));
-        test = new Instances(reader);
-        reader.close();
-        
-        // setting class attribute
-        test.setClassIndex(data.numAttributes() - 1);
-    }
-    
-    public void crossValidate (int folds) throws Exception {
-        /*
-        eval = new Evaluation(data);
-        eval.crossValidateModel(classifier, data, folds, new Random(1));    
-        */
-    }
-    
+ 
     public void splitPercentage (double percent) {
         int trainSize = (int) Math.round(data.numInstances() * percent/ 100);
         int testSize = data.numInstances() - trainSize;
@@ -158,7 +125,7 @@ public class MyWeka {
     public void clusterUnseenData (String[] attributes) throws Exception {
         Instance newInstance = new Instance(data.numAttributes());
         newInstance.setDataset(data);
-        for (int i = 0; i < data.numAttributes()-1; i++) {
+        for (int i = 0; i < data.numAttributes(); i++) {
             if(Attribute.NUMERIC == data.attribute(i).type()){
                 Double value = Double.valueOf(attributes[i]);
                 newInstance.setValue(i, value);
@@ -167,12 +134,8 @@ public class MyWeka {
             }
         }
         
-        double clsLabel = clusterer.clusterInstance(newInstance);
-        newInstance.setClassValue(clsLabel);
-        
-        String result = data.classAttribute().value((int) clsLabel);
-        
-        System.out.println("Hasil Cluster Unseen Data: " + result);
+        double clsLabel = clusterer.clusterInstance(newInstance);        
+        System.out.println("Data is in cluster: " +  (int) clsLabel);
     }
     
     //*** 1. Input Training Data ***//
@@ -225,9 +188,9 @@ public class MyWeka {
     
     public void chooseClusteringAlgorithm () {
         Scanner input = new Scanner(System.in);
-        int option;
+        int option = 0;
         
-        do {
+        while (option < 1 || option > 3) {
             System.out.println("\nClustering Algorithms:");
             System.out.println("1. WEKA's SimpleKMeans");
             System.out.println("2. MyKMeans");
@@ -235,7 +198,7 @@ public class MyWeka {
             System.out.print("> Your option: ");
             option = input.nextInt();
             input.nextLine();
-        } while (option != 1 || option != 2 || option != 3);
+        }
         
         optCls = option;
     }
@@ -249,27 +212,15 @@ public class MyWeka {
         do {
             System.out.println("\nTest Options:");
             System.out.println("1. Full Training");
-            System.out.println("2. Cross Validation");
-            System.out.println("3. Presentage Split");
-            System.out.println("4. Supplied Test Case");
+            System.out.println("2. Precentage Split");
             option = input.nextInt();
             input.nextLine();
-        } while (option != 1 || option != 2 || option != 3 || option != 4);
+        } while (option < 1 || option > 2);
         
         optTest = option;
         
         switch (option) {
             case 2:
-                System.out.print("Masukkan nilai fold: ");
-                folds = input.nextInt();
-                input.nextLine();
-                break;
-            case 3:
-                System.out.print("Masukkan nilai persen train data: ");
-                percent = input.nextDouble();
-                input.nextLine();
-                break;
-            case 4:
                 System.out.print("Masukkan nilai persen train data: ");
                 percent = input.nextDouble();
                 input.nextLine();
@@ -279,78 +230,52 @@ public class MyWeka {
         }  
     }
     
-    //*** 5. Start Classifying ***//
+    //*** 5. Build Clusterer ***//
     
-    public void startClassify () throws Exception {
-        /*
+    public void buildClusterer () throws Exception {
         if(optTest == 1) {
             fullTraining();
         } else if(optTest == 2) {
-            train = data;
-        } else if(optTest == 3) {
             splitPercentage(percent);
-        } else if(optTest == 4) {
-            setTestCase(testFilename);
-            train = data;
         }
 
         if(optCls == 1) {
-            buildClassifierID3();    
+            buildClustererSimpleKMeans();    
         } else if(optCls == 2) {
-            buildClassifierJ48(confidence);
+            buildClustererMyKMeans();
         } else if(optCls == 3) {
-            buildClassifierNaiveBayes();
-        } else if(optCls == 4) {
-            buildClassifierMyID3();
+            buildClustererMyAgnes();
         }
         
-        if(optTest == 2){
-            crossValidate(folds);
-        } else {
-            evaluateModel();
-        }  
+        /*evaluateModel();
         
         //Print Result
-        System.out.println(eval.toSummaryString("\nSummary\n======\n", false));   
-        System.out.println(eval.toClassDetailsString("\nStatistic\n======\n"));
-        System.out.println(eval.toMatrixString("\nConfusion Matrix\n======\n"));
-        */
+        System.out.println(eval.clusterResultsToString());*/
     }
     
-    //*** 6. Classify Unseen Data ***//
+    //*** 6. Cluster Unseen Data ***//
     
-    
-    public void startClassifyUnseen () throws Exception {
-        /*
+    public void startClusterUnseen () throws Exception {
         Scanner input = new Scanner(System.in);
-        
         System.out.print("\nMasukkan nilai atribut (pisahkan dengan spasi): ");
         String in = input.nextLine();
         
         if(optTest == 1) {
             fullTraining();
         } else if(optTest == 2) {
-            train = data;
-        } else if(optTest == 3) {
             splitPercentage(percent);
-        } else if(optTest == 4) {
-            setTestCase(testFilename);
-            train = data;
         }
-
+        
         if(optCls == 1) {
-            buildClassifierID3();    
+            buildClustererSimpleKMeans();    
         } else if(optCls == 2) {
-            buildClassifierJ48(confidence);
+            buildClustererMyKMeans();
         } else if(optCls == 3) {
-            buildClassifierNaiveBayes();
-        } else if(optCls == 4) {
-            buildClassifierMyID3();
+            buildClustererMyAgnes();
         }
         
         String[] attributes = in.split(" ");
-        classifyUnseenData(attributes);  
-        */
+        clusterUnseenData(attributes);
     }
     
     //*** 7. Print Data Summary ***//
