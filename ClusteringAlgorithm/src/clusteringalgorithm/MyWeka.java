@@ -88,8 +88,10 @@ public class MyWeka {
     }
     
     public void buildClustererMyKMeans() throws Exception {
-//        clusterer = new MyKMeans();
-//        clusterer.buildClusterer(train);
+        System.out.println("cek cek");
+        clusterer = new MyKMeans();
+        System.out.println("lolos");
+        clusterer.buildClusterer(train);
     }
 
     public void buildClustererMyAgnes() throws Exception {
@@ -245,10 +247,10 @@ public class MyWeka {
             buildClustererMyAgnes();
         }
         
-        evaluateModel();
+        /*evaluateModel();
         
         //Print Result
-        System.out.println(eval.clusterResultsToString());
+        System.out.println(eval.clusterResultsToString());*/
     }
     
     //*** 6. Cluster Unseen Data ***//
