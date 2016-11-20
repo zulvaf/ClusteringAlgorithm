@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
+import java.util.Vector;
 import weka.clusterers.AbstractClusterer;
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -24,6 +25,7 @@ public class MyAgnes extends AbstractClusterer {
     protected int numClusters;
     protected int linkType;
     protected Node[] clusters;
+    protected int[] clusterOfInstance;
     protected double[][] ranges;
     
     //static link type
@@ -34,7 +36,8 @@ public class MyAgnes extends AbstractClusterer {
     final static int RANGE_MIN = 0;
     final static int RANGE_MAX = 1;
     final static int RANGE_WIDTH = 2;
-    
+
+
     
     class Node implements Serializable {
         Node m_left;
@@ -125,13 +128,129 @@ public class MyAgnes extends AbstractClusterer {
     }
         
     @Override
-    public void buildClusterer(Instances i) throws Exception {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void buildClusterer(Instances data){
+        clusters = new Node[numClusters];
+        int numInstances = trainData.numInstances();
+        clusterOfInstance = new int[numInstances];
+        double[][] distanceMatrix;
+     
+        //initiate first cluster, every instance in one cluster
+        Vector<Integer> [] nClusters = new Vector[numInstances];
+        for(int i=0; i<numInstances; i++) {
+            nClusters[i] = new Vector<Integer>();
+            nClusters[i].add(i);
+        }
+        
+        //initiate distanceMatrix using Eucledian Distance
+        distanceMatrix = new double[numInstances][numInstances];
+        for(int i=0; i<numInstances; i++){
+            for(int j=i+1; j<numInstances; j++) {
+                distanceMatrix[i][j] = euclideanDistance(trainData.instance(i), trainData.instance(j));
+                distanceMatrix[j][i] = distanceMatrix[i][j];
+            }
+        }
+        
+        int iterateCluster = numInstances;
+        Node[] clusterNodes = new Node[numInstances];
+        while(iterateCluster > numClusters){
+//            System.out.println("Iterate:" + iterateCluster);
+//            for(int i=0; i<distanceMatrix.length; i++) {
+//                for(int j=0; j<distanceMatrix[i].length; j++){
+//                    System.out.print((float)distanceMatrix[i][j] + " ");
+//                }
+//                System.out.println();         
+//            }
+//            System.out.println();
+            
+            int[] minInstances = searchMin(distanceMatrix);
+//            System.out.println(minInstances[0] + " " + minInstances[1]);
+            Node node = mergeNodes(minInstances[0], minInstances[1], distanceMatrix, clusterNodes);
+            
+            clusterNodes[minInstances[0]] = node;
+            
+            nClusters[minInstances[0]].addAll(nClusters[minInstances[1]]);
+            nClusters[minInstances[1]].removeAllElements();
+            
+            distanceMatrix = updateDistanceMatrix(distanceMatrix, minInstances[0], minInstances[1]);
+            iterateCluster--;         
+        }
+          
+        int iCurrent = 0;
+        for(int i=0; i<numInstances; i++){
+            if (nClusters[i].size() > 0) {
+                for (int j = 0; j < nClusters[i].size(); j++) {
+                    clusterOfInstance[nClusters[i].elementAt(j)] = iCurrent;
+                }
+                clusters[iCurrent] = clusterNodes[i];
+                iCurrent++;
+            }
+        }
     }
 
     @Override
     public int numberOfClusters() {
         return numClusters;
+    }
+    
+    
+    
+    public Node mergeNodes(int node1, int node2, double[][] matrix, Node[] clusterNodes){
+        if (node1 > node2) {
+          int temp = node1; node1 = node2; node2 = temp;
+        }
+
+        // track hierarchy
+        Node node = new Node();
+        if (clusterNodes[node1] == null) {
+          node.m_iLeftInstance = node1;
+        } else {
+          node.m_left = clusterNodes[node1];
+          clusterNodes[node1].m_parent = node;
+        }
+        if (clusterNodes[node2] == null) {
+          node.m_iRightInstance = node2;
+        } else {
+          node.m_right = clusterNodes[node2];
+          clusterNodes[node2].m_parent = node;
+        }
+        node.setHeight(matrix[node1][node2], matrix[node2][node1]);
+        return node;    
+    }
+    
+    public double[][] updateDistanceMatrix(double[][] matrix, int node1, int node2){ 
+        double[][] new_matrix = matrix;
+        if(linkType == SINGLE) {
+            double[] cluster1 = matrix[node1];
+            double[] cluster2 = matrix[node2];
+            for(int i=0; i<cluster1.length; i++){
+               if(cluster1[i] < cluster2[i]) {
+                   new_matrix[node1][i] = cluster1[i];
+                   new_matrix[i][node1] = cluster1[i];               
+               } else {
+                   new_matrix[node1][i] = cluster2[i];
+                   new_matrix[i][node1] = cluster2[i];
+               }
+               new_matrix[node2][i] = Double.MAX_VALUE;
+               new_matrix[i][node2] = Double.MAX_VALUE;     
+            } 
+            new_matrix[node1][node2] = Double.MAX_VALUE;
+            new_matrix[node2][node1] = Double.MAX_VALUE;  
+            
+        } else {
+            double[] cluster1 = matrix[node1];
+            double[] cluster2 = matrix[node2];
+            for(int i=0; i<cluster1.length; i++){
+               if(cluster1[i] > cluster2[i]) {
+                   new_matrix[node1][i] = cluster1[i];
+                   new_matrix[node2][i] = cluster1[i];
+               } else {
+                   new_matrix[node1][i] = cluster2[i];
+                   new_matrix[node2][i] = cluster2[i];
+               }
+            } 
+        }
+
+        return new_matrix;
     }
     
     public void initializeRanges(){
@@ -229,6 +348,30 @@ public class MyAgnes extends AbstractClusterer {
             return 0;
         } else {
             return (val - ranges[index][RANGE_MIN])/ranges[index][RANGE_WIDTH];
+        }
+    }
+    
+    public int[] searchMin(double[][] matrix) {
+        double min = matrix[0][1];
+        int[] nodes = {0,1};
+        for (int i=1; i< matrix.length; i++) {
+            for(int j=i+1; j< matrix[i].length; j++) {
+                if(matrix[i][j] < min){
+                    min = matrix[i][j];
+                    nodes[0] = i;
+                    nodes[1] = j;
+                }
+            }
+            
+        }
+        return nodes;
+    }
+    
+    public void printModel(){
+        System.out.println("=== Model and evaluation on training set ===\n");
+        for(int i=0; i<numClusters; i++){
+            System.out.println("Cluseter " + i);
+            System.out.println(clusters[i].toString(trainData.classIndex()) + "\n");             
         }
     }
     

@@ -24,12 +24,7 @@ public class TestMyAgnes {
         data.setClassIndex(data.numAttributes() - 1);
         
         MyAgnes agnes = new MyAgnes(data, 2, MyAgnes.SINGLE);
-        for(int i=0; i< data.numAttributes(); i++) {
-            double[][] ranges = agnes.getRanges();
-            System.out.println(ranges[i][MyAgnes.RANGE_MIN] + " " + ranges[i][MyAgnes.RANGE_MAX] + " " + ranges[i][MyAgnes.RANGE_WIDTH]);
-        }
-        System.out.println();
-        System.out.println("Eucledian Distance: " + agnes.euclideanDistance(data.instance(1), data.instance(3)));
-        
+        agnes.buildClusterer(data);
+        agnes.printModel();
     }
 }
