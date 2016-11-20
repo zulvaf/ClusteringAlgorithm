@@ -152,18 +152,8 @@ public class MyAgnes extends AbstractClusterer {
         
         int iterateCluster = numInstances;
         Node[] clusterNodes = new Node[numInstances];
-        while(iterateCluster > numClusters){
-//            System.out.println("Iterate:" + iterateCluster);
-//            for(int i=0; i<distanceMatrix.length; i++) {
-//                for(int j=0; j<distanceMatrix[i].length; j++){
-//                    System.out.print((float)distanceMatrix[i][j] + " ");
-//                }
-//                System.out.println();         
-//            }
-//            System.out.println();
-            
+        while(iterateCluster > numClusters){       
             int[] minInstances = searchMin(distanceMatrix);
-//            System.out.println(minInstances[0] + " " + minInstances[1]);
             Node node = mergeNodes(minInstances[0], minInstances[1], distanceMatrix, clusterNodes);
             
             clusterNodes[minInstances[0]] = node;
@@ -192,7 +182,21 @@ public class MyAgnes extends AbstractClusterer {
         return numClusters;
     }
     
-    
+    public int clusterInstance(Instance instance) throws Exception {
+        if (trainData.numInstances() == 0) {
+          return 0;
+        }
+        double minDistance = Double.MAX_VALUE;
+        int index = -1;
+        for (int i = 0; i < trainData.numInstances(); i++) {
+          double distance = euclideanDistance(instance, trainData.instance(i));
+          if (distance < minDistance) {
+            minDistance = distance;
+            index = i;
+          }
+        }
+        return clusterOfInstance[index];
+    }
     
     public Node mergeNodes(int node1, int node2, double[][] matrix, Node[] clusterNodes){
         if (node1 > node2) {
@@ -242,12 +246,16 @@ public class MyAgnes extends AbstractClusterer {
             for(int i=0; i<cluster1.length; i++){
                if(cluster1[i] > cluster2[i]) {
                    new_matrix[node1][i] = cluster1[i];
-                   new_matrix[node2][i] = cluster1[i];
+                   new_matrix[i][node1] = cluster1[i];  
                } else {
                    new_matrix[node1][i] = cluster2[i];
-                   new_matrix[node2][i] = cluster2[i];
+                   new_matrix[i][node1] = cluster2[i];
                }
+               new_matrix[node2][i] = Double.MAX_VALUE;
+               new_matrix[i][node2] = Double.MAX_VALUE;  
             } 
+            new_matrix[node1][node2] = Double.MAX_VALUE;
+            new_matrix[node2][node1] = Double.MAX_VALUE; 
         }
 
         return new_matrix;
@@ -367,13 +375,37 @@ public class MyAgnes extends AbstractClusterer {
         return nodes;
     }
     
-    public void printModel(){
-        System.out.println("=== Model and evaluation on training set ===\n");
-        for(int i=0; i<numClusters; i++){
-            System.out.println("Cluseter " + i);
-            System.out.println(clusters[i].toString(trainData.classIndex()) + "\n");             
+    public String toString() {
+        StringBuffer buf = new StringBuffer();
+        int attIndex = trainData.classIndex();
+        if (attIndex < 0) {
+          // try find a string, or last attribute otherwise
+          attIndex = 0;
+          while (attIndex < trainData.numAttributes()-1) {
+            if (trainData.attribute(attIndex).isString()) {
+              break;
+            }
+            attIndex++;
+          }
         }
-    }
-    
+        try {
+          if (numberOfClusters() > 0) {
+            for (int i = 0; i < clusters.length; i++) {
+              if (clusters[i] != null) {
+                buf.append("Cluster " + i + "\n");
+                if (trainData.attribute(attIndex).isString()) {
+                  buf.append(clusters[i].toString(attIndex));
+                } else {
+                  buf.append(clusters[i].toString2(attIndex));
+                }
+                buf.append("\n\n");
+              }
+            }
+          }
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        return buf.toString();
+   }
     
 }
