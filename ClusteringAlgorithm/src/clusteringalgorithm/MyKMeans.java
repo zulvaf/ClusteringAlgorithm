@@ -13,6 +13,7 @@ import weka.core.Capabilities;
 import weka.core.Capabilities.Capability;
 import weka.core.DistanceFunction;
 import weka.core.EuclideanDistance;
+import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.TechnicalInformationHandler;
 import weka.core.WeightedInstancesHandler;
@@ -203,6 +204,27 @@ public class MyKMeans
     public int getNumClusters () {
         return m_NumClusters;
     }
+    
+    public int clusterInstance(Instance instance) throws Exception {
+        int minDistanceIdx = 0;
+        double minDistance = 
+            m_DistanceFunction.distance(instance,
+                m_ClusterCentroids.instance(0));
+
+        if (m_NumClusters > 1) {                    
+            for (int clustersIdx = 1; clustersIdx < m_NumClusters; clustersIdx++) {
+                double distance = 
+                    m_DistanceFunction.distance(instance,
+                        m_ClusterCentroids.instance(clustersIdx));
+
+                if (distance < minDistance) {
+                    minDistanceIdx = clustersIdx;
+                    minDistance = distance;
+                }
+            }
+        }
+        return minDistanceIdx;
+      }
     
     public String toString () {
         /*StringBuffer temp = new StringBuffer();

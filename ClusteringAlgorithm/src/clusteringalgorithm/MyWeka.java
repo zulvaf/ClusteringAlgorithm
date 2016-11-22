@@ -100,9 +100,9 @@ public class MyWeka {
     public void evaluateModel () throws Exception {
         eval = new ClusterEvaluation();
         eval.setClusterer(clusterer);
-        System.out.println("----- clusterer -----");
-        System.out.println(clusterer);
-        //eval.evaluateClusterer(test);
+//        System.out.println("----- clusterer -----");
+//        System.out.println(clusterer);
+        eval.evaluateClusterer(test);
     }
     
     //****************** Testing Option Setter ******************//
