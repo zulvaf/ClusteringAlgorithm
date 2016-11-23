@@ -54,17 +54,15 @@ public class MyKMeans
         return result;
     }
     
-    protected double[] moveCentroid(int centroidIndex, Instances members, boolean updateClusterInfo) {
+    protected double[] moveCentroid(int centroidIndex, Instances members) {
         double[] vals = new double[members.numAttributes()];
 
         for (int j = 0; j < members.numAttributes(); j++) {					
             //in case of Euclidian distance the centroid is the mean point
-            //in both cases, if the attribute is nominal, the centroid is the mode
-            if (m_DistanceFunction instanceof EuclideanDistance ||
-                members.attribute(j).isNominal())
-            {													
-                vals[j] = members.meanOrMode(j);
-            }	
+            //in both cases, if the attribute is nominal, the centroid is the mode													
+            vals[j] = members.meanOrMode(j);
+            m_ClusterCentroids.instance(centroidIndex).setValue(j, vals[j]);
+            //m_ClusterCentroids.add(new DenseInstance(1.0, vals));
 
             /*if (updateClusterInfo) {
                 m_ClusterMissingCounts[centroidIndex][j] = members.attributeStats(j).missingCount;
@@ -82,8 +80,6 @@ public class MyKMeans
                 }
             }*/
         }
-        /* if (updateClusterInfo)
-            m_ClusterCentroids.add(new DenseInstance(1.0, vals));*/
         return vals;
     }
     
@@ -114,10 +110,11 @@ public class MyKMeans
         m_DistanceFunction.setInstances(instances);
         
         // set initial seeds
+        //Random RandomO = new Random(getSeed());
         Random RandomO = new Random();
         Instances seedCandidates = new Instances(data);
         for (int i = 0; i < m_NumClusters; i++) {
-            int instanceIdx = RandomO.nextInt(seedCandidates.numInstances()+1);
+            int instanceIdx = RandomO.nextInt(seedCandidates.numInstances());
             m_ClusterCentroids.add(seedCandidates.instance(instanceIdx));
             seedCandidates.delete(instanceIdx);
         }
@@ -169,8 +166,6 @@ public class MyKMeans
             
             /* 3. set new centroids */
             // update centroids
-            System.out.println("----- before: ");
-            System.out.println("" + m_ClusterCentroids);
             int emptyClusterCount = 0;
             Instances[] tempI = new Instances[m_NumClusters];
             
@@ -185,11 +180,10 @@ public class MyKMeans
                     // empty cluster
                     emptyClusterCount++;
                 } else {
-                    moveCentroid(i, tempI[i], true);					
+                    moveCentroid(i, tempI[i]);
+                    
                 }
             }
-            System.out.println("----- after: ");
-            System.out.println("" + m_ClusterCentroids);
             
             m_Iterations++;
         }       
