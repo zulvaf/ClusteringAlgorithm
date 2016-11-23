@@ -9,6 +9,7 @@ import java.util.Enumeration;
 import java.util.Random;
 import weka.clusterers.NumberOfClustersRequestable;
 import weka.clusterers.RandomizableClusterer;
+import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Capabilities.Capability;
 import weka.core.DistanceFunction;
@@ -18,6 +19,7 @@ import weka.core.Instances;
 import weka.core.TechnicalInformationHandler;
 import weka.core.WeightedInstancesHandler;
 import weka.core.Utils;
+import weka.core.FastVector;
 
 /**
  *
@@ -95,9 +97,17 @@ public class MyKMeans
         
         Instances instances = new Instances(data);
         
+        m_squaredErrors = new double [m_NumClusters];
+        
         instances.setClassIndex(-1);
         
-        m_ClusterCentroids = new Instances(instances, m_NumClusters);
+        FastVector attInfo = new FastVector(instances.numAttributes());
+        for (int i = 0; i < instances.numAttributes(); i++) {
+            attInfo.addElement(instances.attribute(i));
+        }
+        
+        m_ClusterCentroids = new Instances(instances.relationName(), attInfo, m_NumClusters);
+
         int[] clusterAssignments = new int [instances.numInstances()];
         int[] prevClusterAssignments = new int [instances.numInstances()];
  		
@@ -141,6 +151,7 @@ public class MyKMeans
                 }
                 
                 clusterAssignments[instancesIdx] = minDistanceIdx;
+                m_squaredErrors[minDistanceIdx] += minDistance * minDistance;
             }
             
             /* 2. check whether the new assignment is the same with the previous one */
@@ -158,6 +169,8 @@ public class MyKMeans
             
             /* 3. set new centroids */
             // update centroids
+            System.out.println("----- before: ");
+            System.out.println("" + m_ClusterCentroids);
             int emptyClusterCount = 0;
             Instances[] tempI = new Instances[m_NumClusters];
             
@@ -175,14 +188,8 @@ public class MyKMeans
                     moveCentroid(i, tempI[i], true);					
                 }
             }
-
-            /*if (!converged) {
-                m_ClusterCentroids.instance(0).attribute(0).
-                
-            }
-            for (int clustersIdx = 0; clustersIdx < m_NumClusters; clustersIdx++) {
-                m_Centroids = null;
-            }*/
+            System.out.println("----- after: ");
+            System.out.println("" + m_ClusterCentroids);
             
             m_Iterations++;
         }       
@@ -227,25 +234,34 @@ public class MyKMeans
       }
     
     public String toString () {
-        /*StringBuffer temp = new StringBuffer();
-        temp.append("\nkMeans\n======\n");
-        temp.append("\nNumber of iterations: " + m_Iterations);
-
-        if (!m_FastDistanceCalc) {
-          temp.append("\n");
-          if (m_DistanceFunction instanceof EuclideanDistance) {
-            temp.append("Within cluster sum of squared errors: " + Utils.sum(m_squaredErrors));
-          }else{
-            temp.append("Sum of within cluster distances: " + Utils.sum(m_squaredErrors));
-          }
+        if (m_ClusterCentroids == null) {
+            return "No clusterer built yet!";
         }
-
-        if (!m_dontReplaceMissing) {
-          temp.append("\nMissing values globally replaced with mean/mode");
-        }
+        StringBuffer temp = new StringBuffer();
+        temp.append("\nMyKMeans\n======\n");
         
-        return temp.toString();*/
-        return m_ClusterCentroids.toString();
+        temp.append("\nNumber of iterations: " + m_Iterations);
+        temp.append("\nWithin cluster sum of squared errors: " + Utils.sum(m_squaredErrors));
+        temp.append("\nMissing values globally replaced with mean/mode");
+        
+        temp.append("\n\nCluster centroids:\n");
+        temp.append(m_ClusterCentroids.toString() + "\n\n");
+        
+        //temp.append("-- Full Data --\n");
+        
+        /*for (int i = 0; i < m_NumClusters; i++) {
+            temp.append("\n-- Cluster " + i + " --\n");
+            
+            System.out.println("\n-- CEK Cluster " + i + " --\n");
+            System.out.println("" + m_ClusterCentroids);
+            for (int j = 0; j < m_ClusterCentroids.numAttributes(); j++) {
+                System.out.println("meong bgt");
+                System.out.println("meong: " + m_ClusterCentroids.attribute(j).value(i));
+                //temp.append("" + m_ClusterCentroids.attribute(j).name() + ": " + m_ClusterCentroids.attribute(j) + "\n");
+            }
+
+        }*/
+        return temp.toString();
     }
   
 }
