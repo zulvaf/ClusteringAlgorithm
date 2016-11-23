@@ -5,7 +5,6 @@
  */
 package clusteringalgorithm;
 
-import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -37,80 +36,40 @@ public class MyAgnes extends AbstractClusterer {
     final static int RANGE_MAX = 1;
     final static int RANGE_WIDTH = 2;
 
-
-    
-    class Node implements Serializable {
+    class Node {
         Node m_left;
         Node m_right;
         Node m_parent;
-        int m_iLeftInstance;
-        int m_iRightInstance;
-        double m_fLeftLength = 0;
-        double m_fRightLength = 0;
-        double m_fHeight = 0;
+        int m_instance;
+        double m_leftLength = 0;
+        double m_rightLength = 0;
+        double m_height = 0;
         public String toString(int attIndex) {
           NumberFormat nf = NumberFormat.getNumberInstance(new Locale("en","US"));
           DecimalFormat myFormatter = (DecimalFormat)nf;
           myFormatter.applyPattern("#.#####");
-
-          if (m_left == null) {
-            if (m_right == null) {
-              return "(" + trainData.instance(m_iLeftInstance).stringValue(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              trainData.instance(m_iRightInstance).stringValue(attIndex) +":" + myFormatter.format(m_fRightLength) + ")";
-            } else {
-              return "(" + trainData.instance(m_iLeftInstance).stringValue(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              m_right.toString(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            }
+          
+          if (m_left == null && m_right == null) {
+              if (trainData.attribute(attIndex).isString()) {
+                  return trainData.instance(m_instance).stringValue(attIndex);
+              } else {
+                  return Double.toString(trainData.instance(m_instance).value(attIndex));
+              }
           } else {
-            if (m_right == null) {
-              return "(" + m_left.toString(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              trainData.instance(m_iRightInstance).stringValue(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            } else {
-              return "(" + m_left.toString(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +m_right.toString(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            }
+              return "(" + m_left.toString(attIndex) + ":" + myFormatter.format(m_leftLength) + "," + m_right.toString(attIndex) + ":" + myFormatter.format(m_rightLength) + ")";
           }
         }
-        public String toString2(int attIndex) {
-          NumberFormat nf = NumberFormat.getNumberInstance(new Locale("en","US"));
-          DecimalFormat myFormatter = (DecimalFormat)nf;
-          myFormatter.applyPattern("#.#####");
-
+        void setHeight(double height) {
+          m_height = height;
           if (m_left == null) {
-            if (m_right == null) {
-              return "(" + trainData.instance(m_iLeftInstance).value(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              trainData.instance(m_iRightInstance).value(attIndex) +":" + myFormatter.format(m_fRightLength) + ")";
-            } else {
-              return "(" + trainData.instance(m_iLeftInstance).value(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              m_right.toString2(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            }
+            m_leftLength = height;
           } else {
-            if (m_right == null) {
-              return "(" + m_left.toString2(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +
-              trainData.instance(m_iRightInstance).value(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            } else {
-              return "(" + m_left.toString2(attIndex) + ":" + myFormatter.format(m_fLeftLength) + "," +m_right.toString2(attIndex) + ":" + myFormatter.format(m_fRightLength) + ")";
-            }
-          }
-        }
-        void setHeight(double fHeight1, double fHeight2) {
-          m_fHeight = fHeight1;
-          if (m_left == null) {
-            m_fLeftLength = fHeight1;
-          } else {
-            m_fLeftLength = fHeight1 - m_left.m_fHeight;
+            m_leftLength = height - m_left.m_height;
           }
           if (m_right == null) {
-            m_fRightLength = fHeight2;
+            m_rightLength = height;
           } else {
-            m_fRightLength = fHeight2 - m_right.m_fHeight;
-          }
-        }
-        void setLength(double fLength1, double fLength2) {
-          m_fLeftLength = fLength1;
-          m_fRightLength = fLength2;
-          m_fHeight = fLength1;
-          if (m_left != null) {
-            m_fHeight += m_left.m_fHeight;
+            m_rightLength = height - m_right.m_height;
           }
         }
     }
@@ -206,18 +165,24 @@ public class MyAgnes extends AbstractClusterer {
         // track hierarchy
         Node node = new Node();
         if (clusterNodes[node1] == null) {
-          node.m_iLeftInstance = node1;
+          Node left = new Node();
+          left.m_instance = node1;
+          node.m_left = left;
+          left.m_parent = node;
         } else {
           node.m_left = clusterNodes[node1];
           clusterNodes[node1].m_parent = node;
         }
         if (clusterNodes[node2] == null) {
-          node.m_iRightInstance = node2;
+          Node right = new Node();
+          right.m_instance = node1;
+          node.m_right = right;
+          right.m_parent = node;
         } else {
           node.m_right = clusterNodes[node2];
           clusterNodes[node2].m_parent = node;
         }
-        node.setHeight(matrix[node1][node2], matrix[node2][node1]);
+        node.setHeight(matrix[node1][node2]);
         return node;    
     }
     
@@ -309,6 +274,7 @@ public class MyAgnes extends AbstractClusterer {
             }
         }
     }
+    
     public double euclideanDistance(Instance first, Instance second){
         //assumption : numAttribute first == numAttribute second, index first = index second
         
@@ -379,7 +345,6 @@ public class MyAgnes extends AbstractClusterer {
         StringBuffer buf = new StringBuffer();
         int attIndex = trainData.classIndex();
         if (attIndex < 0) {
-          // try find a string, or last attribute otherwise
           attIndex = 0;
           while (attIndex < trainData.numAttributes()-1) {
             if (trainData.attribute(attIndex).isString()) {
@@ -393,11 +358,7 @@ public class MyAgnes extends AbstractClusterer {
             for (int i = 0; i < clusters.length; i++) {
               if (clusters[i] != null) {
                 buf.append("Cluster " + i + "\n");
-                if (trainData.attribute(attIndex).isString()) {
-                  buf.append(clusters[i].toString(attIndex));
-                } else {
-                  buf.append(clusters[i].toString2(attIndex));
-                }
+                buf.append(clusters[i].toString(attIndex));
                 buf.append("\n\n");
               }
             }
