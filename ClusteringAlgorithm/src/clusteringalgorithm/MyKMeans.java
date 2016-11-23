@@ -7,6 +7,7 @@ package clusteringalgorithm;
 
 import java.util.Enumeration;
 import java.util.Random;
+import java.util.Scanner;
 import weka.clusterers.NumberOfClustersRequestable;
 import weka.clusterers.RandomizableClusterer;
 import weka.core.Attribute;
@@ -58,27 +59,9 @@ public class MyKMeans
         double[] vals = new double[members.numAttributes()];
 
         for (int j = 0; j < members.numAttributes(); j++) {					
-            //in case of Euclidian distance the centroid is the mean point
-            //in both cases, if the attribute is nominal, the centroid is the mode													
             vals[j] = members.meanOrMode(j);
             m_ClusterCentroids.instance(centroidIndex).setValue(j, vals[j]);
-            //m_ClusterCentroids.add(new DenseInstance(1.0, vals));
 
-            /*if (updateClusterInfo) {
-                m_ClusterMissingCounts[centroidIndex][j] = members.attributeStats(j).missingCount;
-                m_ClusterNominalCounts[centroidIndex][j] = members.attributeStats(j).nominalCounts;
-                if (members.attribute(j).isNominal()) {
-                    if (m_ClusterMissingCounts[centroidIndex][j] >  
-                        m_ClusterNominalCounts[centroidIndex][j][Utils.maxIndex(m_ClusterNominalCounts[centroidIndex][j])]) 
-                    {
-                        vals[j] = Utils.missingValue(); // mark mode as missing
-                    }
-                } else {
-                    if (m_ClusterMissingCounts[centroidIndex][j] == members.numInstances()) {
-                    vals[j] = Utils.missingValue(); // mark mean as missing
-                    }
-                }
-            }*/
         }
         return vals;
     }
@@ -88,6 +71,13 @@ public class MyKMeans
     public void buildClusterer(Instances data) throws Exception {
         // check whether the clusterer can hold the data
         getCapabilities().testWithFail(data);
+        
+        // ask for the number of clusters
+        Scanner input = new Scanner(System.in);
+        System.out.print("\n> Num of Clusters: ");
+        int in = input.nextInt();
+        input.nextLine();
+        setNumClusters(in);
       
         m_Iterations = 0;
         
@@ -239,22 +229,40 @@ public class MyKMeans
         temp.append("\nMissing values globally replaced with mean/mode");
         
         temp.append("\n\nCluster centroids:\n");
-        temp.append(m_ClusterCentroids.toString() + "\n\n");
-        
-        //temp.append("-- Full Data --\n");
-        
-        /*for (int i = 0; i < m_NumClusters; i++) {
-            temp.append("\n-- Cluster " + i + " --\n");
-            
-            System.out.println("\n-- CEK Cluster " + i + " --\n");
-            System.out.println("" + m_ClusterCentroids);
+        //temp.append(m_ClusterCentroids.toString() + "\n\n");
+        for (int i = 0; i < m_ClusterCentroids.numInstances(); i++) {
+            temp.append("\nCluster " + i);
             for (int j = 0; j < m_ClusterCentroids.numAttributes(); j++) {
-                System.out.println("meong bgt");
-                System.out.println("meong: " + m_ClusterCentroids.attribute(j).value(i));
-                //temp.append("" + m_ClusterCentroids.attribute(j).name() + ": " + m_ClusterCentroids.attribute(j) + "\n");
+                temp.append("\n" + m_ClusterCentroids.instance(i).attribute(j).name());
+                //temp.append(": " + m_ClusterCentroids.instance(i).toString());
+                Attribute att = m_ClusterCentroids.instance(i).attribute(j);
+                if (att.isNominal() || att.isString() || att.isDate()) {
+                    temp.append(": " + m_ClusterCentroids.instance(i).stringValue(j));
+                } else if (att.isNumeric()) {
+                    temp.append(": " + m_ClusterCentroids.instance(i).value(j));
+                }
             }
+        }
+        
+        
+        return temp.toString();
+    }
+    
+    private String pad(String source, String padChar, 
+                     int length, boolean leftPad) {
+        StringBuffer temp = new StringBuffer();
 
-        }*/
+        if (leftPad) {
+            for (int i = 0; i< length; i++) {
+                temp.append(padChar);
+            }
+            temp.append(source);
+        } else {
+            temp.append(source);
+            for (int i = 0; i< length; i++) {
+                temp.append(padChar);
+            }
+        }
         return temp.toString();
     }
   

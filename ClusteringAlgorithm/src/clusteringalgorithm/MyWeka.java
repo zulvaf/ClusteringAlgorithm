@@ -233,7 +233,7 @@ public class MyWeka {
     //*** 5. Build Clusterer ***//
     
     public void buildClusterer () throws Exception {
-        if(optTest == 1) {
+        if (optTest == 1) {
             fullTraining();
         } else if(optTest == 2) {
             splitPercentage(percent);
