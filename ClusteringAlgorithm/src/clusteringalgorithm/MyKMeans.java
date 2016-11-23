@@ -6,6 +6,7 @@
 package clusteringalgorithm;
 
 import java.util.Enumeration;
+import java.util.Random;
 import weka.clusterers.NumberOfClustersRequestable;
 import weka.clusterers.RandomizableClusterer;
 import weka.core.Capabilities;
@@ -15,6 +16,7 @@ import weka.core.EuclideanDistance;
 import weka.core.Instances;
 import weka.core.TechnicalInformationHandler;
 import weka.core.WeightedInstancesHandler;
+import weka.core.Utils;
 
 /**
  *
@@ -27,11 +29,13 @@ public class MyKMeans
 {
     private int m_NumClusters = 2; // numbers of cluster to generate, default = 2
     private Instances m_ClusterCentroids; // holds the cluster centroids
+    private boolean m_dontReplaceMissing = false; // Replace missing values globally?
     private int[] m_ClusterSizes; // The number of instances in each cluster
     private int m_MaxIterations = 500; // Maximum number of iterations to be executed
     private int m_Iterations; // Keep track of the number of iterations completed before convergence
     private double[] m_squaredErrors; // Holds the squared errors for all clusters
     protected DistanceFunction m_DistanceFunction = new EuclideanDistance(); // the distance function used
+    protected boolean m_FastDistanceCalc = false; // whether to use fast calculation of distances (using a cut-off)
     
     
     public Capabilities getCapabilities () {
@@ -98,6 +102,15 @@ public class MyKMeans
  		
         m_DistanceFunction.setInstances(instances);
         
+        // set initial seeds
+        Random RandomO = new Random();
+        Instances seedCandidates = new Instances(data);
+        for (int i = 0; i < m_NumClusters; i++) {
+            int instanceIdx = RandomO.nextInt(seedCandidates.numInstances()+1);
+            m_ClusterCentroids.add(seedCandidates.instance(instanceIdx));
+            seedCandidates.delete(instanceIdx);
+        }
+        
         boolean converged = false;
         while (!converged) {
             /* prep: save the previous clusters */
@@ -132,25 +145,28 @@ public class MyKMeans
             /* 2. check whether the new assignment is the same with the previous one */
                 /* 2.1 if same, then it is converged already */
                 /* 2.2 if not, iterate again */
-            converged = true;
-            int i = 0;
-            while (converged && i < data.numInstances()) {
-                converged = clusterAssignments[i] == prevClusterAssignments[i];
-                i++;
+            if (m_Iterations >= 0) {
+                converged = true;
+                int i = 0;
+                while (converged && i < data.numInstances()) {
+                    converged = clusterAssignments[i] == prevClusterAssignments[i];
+                    i++;
+                }
             }
+            
             
             /* 3. set new centroids */
             // update centroids
             int emptyClusterCount = 0;
             Instances[] tempI = new Instances[m_NumClusters];
-            m_ClusterCentroids = new Instances(instances, m_NumClusters);
-            for (i = 0; i < m_NumClusters; i++) {
+            
+            for (int i = 0; i < m_NumClusters; i++) {
                 tempI[i] = new Instances(instances, 0);
             }
-            for (i = 0; i < instances.numInstances(); i++) {
+            for (int i = 0; i < instances.numInstances(); i++) {
                 tempI[clusterAssignments[i]].add(instances.instance(i));
             }
-            for (i = 0; i < m_NumClusters; i++) {
+            for (int i = 0; i < m_NumClusters; i++) {
                 if (tempI[i].numInstances() == 0) {
                     // empty cluster
                     emptyClusterCount++;
@@ -158,6 +174,7 @@ public class MyKMeans
                     moveCentroid(i, tempI[i], true);					
                 }
             }
+
             /*if (!converged) {
                 m_ClusterCentroids.instance(0).attribute(0).
                 
@@ -165,6 +182,8 @@ public class MyKMeans
             for (int clustersIdx = 0; clustersIdx < m_NumClusters; clustersIdx++) {
                 m_Centroids = null;
             }*/
+            
+            m_Iterations++;
         }       
     }
 
@@ -183,6 +202,28 @@ public class MyKMeans
     
     public int getNumClusters () {
         return m_NumClusters;
+    }
+    
+    public String toString () {
+        /*StringBuffer temp = new StringBuffer();
+        temp.append("\nkMeans\n======\n");
+        temp.append("\nNumber of iterations: " + m_Iterations);
+
+        if (!m_FastDistanceCalc) {
+          temp.append("\n");
+          if (m_DistanceFunction instanceof EuclideanDistance) {
+            temp.append("Within cluster sum of squared errors: " + Utils.sum(m_squaredErrors));
+          }else{
+            temp.append("Sum of within cluster distances: " + Utils.sum(m_squaredErrors));
+          }
+        }
+
+        if (!m_dontReplaceMissing) {
+          temp.append("\nMissing values globally replaced with mean/mode");
+        }
+        
+        return temp.toString();*/
+        return m_ClusterCentroids.toString();
     }
   
 }
