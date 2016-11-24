@@ -92,8 +92,8 @@ public class MyWeka {
         clusterer.buildClusterer(train);
     }
 
-    public void buildClustererMyAgnes() throws Exception {
-        clusterer = new MyAgnes(data, 2, MyAgnes.SINGLE);
+    public void buildClustererMyAgnes(int cluster, int type) throws Exception {
+        clusterer = new MyAgnes(data, cluster, type);
         clusterer.buildClusterer(train);
     }
     
@@ -233,6 +233,8 @@ public class MyWeka {
     //*** 5. Build Clusterer ***//
     
     public void buildClusterer () throws Exception {
+        Scanner input = new Scanner(System.in);
+        
         if (optTest == 1) {
             fullTraining();
         } else if(optTest == 2) {
@@ -244,7 +246,11 @@ public class MyWeka {
         } else if(optCls == 2) {
             buildClustererMyKMeans();
         } else if(optCls == 3) {
-            buildClustererMyAgnes();
+            System.out.print("Jumlah cluster: ");
+            int cluster = input.nextInt();
+            System.out.print("Metode penentuan jarak (Single-0; Complete-1): ");
+            int link = input.nextInt();
+            buildClustererMyAgnes(cluster, link);
         }
         
         evaluateModel();
@@ -271,7 +277,11 @@ public class MyWeka {
         } else if(optCls == 2) {
             buildClustererMyKMeans();
         } else if(optCls == 3) {
-            buildClustererMyAgnes();
+            System.out.print("Jumlah cluster: ");
+            int cluster = input.nextInt();
+            System.out.print("Metode penentuan jarak (Single-0; Complete-1): ");
+            int link = input.nextInt();
+            buildClustererMyAgnes(cluster, link);
         }
         
         String[] attributes = in.split(" ");
