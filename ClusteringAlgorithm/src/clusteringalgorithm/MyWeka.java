@@ -35,6 +35,7 @@ public class MyWeka {
     
     private int optCls = 1;
     private int optTest = 1;
+    private int numClusters = 2;
     private double percent;
             
     public MyWeka () {
@@ -88,7 +89,7 @@ public class MyWeka {
     }
     
     public void buildClustererMyKMeans() throws Exception {
-        clusterer = new MyKMeans();
+        clusterer = new MyKMeans(numClusters);
         clusterer.buildClusterer(train);
     }
 
@@ -201,6 +202,21 @@ public class MyWeka {
         }
         
         optCls = option;
+        
+        if (optCls == 2) {
+            // ask for the number of clusters
+            System.out.print("\n> Num of Clusters: ");
+            int in = input.nextInt();
+            input.nextLine();
+
+            while (in <= 0 || in > data.numInstances()) {
+                System.out.println("\nNumber of Clusters must be at least 1 and maximum = number of data");
+                System.out.print("\n> Num of Clusters: ");
+                in = input.nextInt();
+                input.nextLine();
+            }
+            numClusters = in;
+        }
     }
     
     //*** 4. Pilih Test Option ***//

@@ -26,11 +26,10 @@ import weka.core.FastVector;
  *
  * @author TOSHIBA PC
  */
-public class MyKMeans 
-    extends RandomizableClusterer
-//    implements NumberOfClustersRequestable, WeightedInstancesHandler,
-//        TechnicalInformationHandler 
-{
+public class MyKMeans extends RandomizableClusterer {
+    
+    /*** Class Attributes ***/
+    
     private int m_NumClusters = 2; // numbers of cluster to generate, default = 2
     private Instances m_ClusterCentroids; // holds the cluster centroids
     private boolean m_dontReplaceMissing = false; // Replace missing values globally?
@@ -42,71 +41,56 @@ public class MyKMeans
     protected boolean m_FastDistanceCalc = false; // whether to use fast calculation of distances (using a cut-off)
     
     
-    public Capabilities getCapabilities () {
-        Capabilities result = super.getCapabilities();
-        result.disableAll();
-        result.enable(Capability.NO_CLASS);
- 
-        // attributes
-        result.enable(Capability.NOMINAL_ATTRIBUTES);
-        result.enable(Capability.NUMERIC_ATTRIBUTES);
-        result.enable(Capability.MISSING_VALUES);
- 
-        return result;
+    /*** Constructor ***/
+    public MyKMeans (int numClusters) {
+        m_NumClusters = numClusters;
     }
     
-    protected double[] moveCentroid(int centroidIndex, Instances members) {
-        double[] vals = new double[members.numAttributes()];
-
-        for (int j = 0; j < members.numAttributes(); j++) {					
-            vals[j] = members.meanOrMode(j);
-            m_ClusterCentroids.instance(centroidIndex).setValue(j, vals[j]);
-
+    /*** Getter and Setter ***/
+    
+    public void setNumClusters (int n) throws Exception {
+        if (n <= 0) {
+            throw new Exception("Number of clusters must be > 0");
         }
-        return vals;
+        m_NumClusters = n;
     }
     
-    /*** Extends RandomizableClusterer ***/
+    public int getNumClusters () {
+        return m_NumClusters;
+    }
+    
+    @Override
+    public int numberOfClusters() throws Exception {
+        return m_NumClusters;
+    }
+    
+    
+    /*** KMeans Methods */
+    
     @Override
     public void buildClusterer(Instances data) throws Exception {
+        /* build the clusterer using the traning data */
+        
         // check whether the clusterer can hold the data
         getCapabilities().testWithFail(data);
         
-        // ask for the number of clusters
-        Scanner input = new Scanner(System.in);
-        System.out.print("\n> Num of Clusters: ");
-        int in = input.nextInt();
-        input.nextLine();
-        
-        while (in <= 0 || in > data.numInstances()) {
-            System.out.println("\nNumber of Clusters must be at least 1 and maximum = number of data");
-            System.out.print("\n> Num of Clusters: ");
-            in = input.nextInt();
-            input.nextLine();
-        }
-        setNumClusters(in);
-      
-        m_Iterations = 0;
-        
-        Instances instances = new Instances(data);
-        
-        m_squaredErrors = new double [m_NumClusters];
-        
+        // init variables
+        Instances instances = new Instances(data); // copy data
         instances.setClassIndex(-1);
+        m_Iterations = 0; // init number of iterations
+        m_squaredErrors = new double [m_NumClusters]; // init squaredErrors
+        int[] clusterAssignments = new int [instances.numInstances()]; // current cluster assignments
+        int[] prevClusterAssignments = new int [instances.numInstances()]; // previous cluster assignments
+        m_DistanceFunction.setInstances(instances); // set instance to the distance function
         
+        // init cluster centroids
         FastVector attInfo = new FastVector(instances.numAttributes());
         for (int i = 0; i < instances.numAttributes(); i++) {
             attInfo.addElement(instances.attribute(i));
         }
-        
         m_ClusterCentroids = new Instances(instances.relationName(), attInfo, m_NumClusters);
-
-        int[] clusterAssignments = new int [instances.numInstances()];
-        int[] prevClusterAssignments = new int [instances.numInstances()];
- 		
-        m_DistanceFunction.setInstances(instances);
         
-        // set initial seeds
+        // set initial cluster centroids
         Random RandomO = new Random(10);
         Instances seedCandidates = new Instances(data);
         for (int i = 0; i < m_NumClusters; i++) {
@@ -115,15 +99,21 @@ public class MyKMeans
             seedCandidates.delete(instanceIdx);
         }
         
+        // do the iterations until converged
         boolean converged = false;
         while (!converged) {
-            /* prep: save the previous clusters */
+            // preparation: save the previous clusters
             if (m_Iterations >= 0) {
                 prevClusterAssignments = clusterAssignments;
                 clusterAssignments = new int [instances.numInstances()];
             }
             
-            /* 1. assign instances to clusters */
+            // reinit squared errors
+            for (int i = 0; i < m_NumClusters; i++) {
+                m_squaredErrors[i] = 0;
+            }
+           
+            // assign instances to clusters
             for (int instancesIdx = 0; instancesIdx < data.numInstances(); instancesIdx++) {
                 int minDistanceIdx = 0;
                 double minDistance = 
@@ -147,9 +137,9 @@ public class MyKMeans
                 m_squaredErrors[minDistanceIdx] += minDistance * minDistance;
             }
             
-            /* 2. check whether the new assignment is the same with the previous one */
-                /* 2.1 if same, then it is converged already */
-                /* 2.2 if not, iterate again */
+            // check whether the new assignment is the same with the previous one
+                // if same, then it is converged already
+                // if not, iterate again (not converged)
             if (m_Iterations >= 0) {
                 converged = true;
                 int i = 0;
@@ -159,8 +149,6 @@ public class MyKMeans
                 }
             }
             
-            
-            /* 3. set new centroids */
             // update centroids
             int emptyClusterCount = 0;
             Instances[] tempI = new Instances[m_NumClusters];
@@ -183,28 +171,14 @@ public class MyKMeans
                 m_ClusterSizes[i] = tempI[i].numInstances();
             }
             
+            // update number of iterations
             m_Iterations++;
         }       
     }
-
-    @Override
-    public int numberOfClusters() throws Exception {
-        return m_NumClusters;
-    }
-    
-    /*** Getter and Setter ***/
-    public void setNumClusters (int n) throws Exception {
-        if (n <= 0) {
-            throw new Exception("Number of clusters must be > 0");
-        }
-        m_NumClusters = n;
-    }
-    
-    public int getNumClusters () {
-        return m_NumClusters;
-    }
     
     public int clusterInstance(Instance instance) throws Exception {
+        /* returns the index of the best cluster for the instance */
+        
         int minDistanceIdx = 0;
         double minDistance = 
             m_DistanceFunction.distance(instance,
@@ -223,9 +197,44 @@ public class MyKMeans
             }
         }
         return minDistanceIdx;
-      }
+    }
+    
+    protected double[] moveCentroid(int centroidIndex, Instances members) {
+        /*  move the centroid to the center of the cluster
+            returns an array of the new center's attribute values
+        */
+        
+        double[] vals = new double[members.numAttributes()];
+
+        for (int j = 0; j < members.numAttributes(); j++) {					
+            vals[j] = members.meanOrMode(j);
+            m_ClusterCentroids.instance(centroidIndex).setValue(j, vals[j]);
+
+        }
+        return vals;
+    }
+    
+    
+    /*** Miscellaneous ***/
+    
+    public Capabilities getCapabilities () {
+        /* returns the capabilities of the clusterer */
+        
+        Capabilities result = super.getCapabilities();
+        result.disableAll();
+        result.enable(Capability.NO_CLASS);
+ 
+        // attributes
+        result.enable(Capability.NOMINAL_ATTRIBUTES);
+        result.enable(Capability.NUMERIC_ATTRIBUTES);
+        result.enable(Capability.MISSING_VALUES);
+ 
+        return result;
+    }
     
     public String toString () {
+        /* returns string interpretation and summary of the clusterer */
+        
         if (m_ClusterCentroids == null) {
             return "No clusterer built yet!";
         }
@@ -258,6 +267,3 @@ public class MyKMeans
     }
   
 }
-
-
-
