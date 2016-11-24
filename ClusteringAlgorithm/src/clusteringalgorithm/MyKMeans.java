@@ -77,6 +77,13 @@ public class MyKMeans
         System.out.print("\n> Num of Clusters: ");
         int in = input.nextInt();
         input.nextLine();
+        
+        while (in <= 0 || in > data.numInstances()) {
+            System.out.println("\nNumber of Clusters must be at least 1 and maximum = number of data");
+            System.out.print("\n> Num of Clusters: ");
+            in = input.nextInt();
+            input.nextLine();
+        }
         setNumClusters(in);
       
         m_Iterations = 0;
@@ -100,8 +107,7 @@ public class MyKMeans
         m_DistanceFunction.setInstances(instances);
         
         // set initial seeds
-        //Random RandomO = new Random(getSeed());
-        Random RandomO = new Random();
+        Random RandomO = new Random(10);
         Instances seedCandidates = new Instances(data);
         for (int i = 0; i < m_NumClusters; i++) {
             int instanceIdx = RandomO.nextInt(seedCandidates.numInstances());
@@ -158,6 +164,7 @@ public class MyKMeans
             // update centroids
             int emptyClusterCount = 0;
             Instances[] tempI = new Instances[m_NumClusters];
+            m_ClusterSizes = new int [m_NumClusters];
             
             for (int i = 0; i < m_NumClusters; i++) {
                 tempI[i] = new Instances(instances, 0);
@@ -173,6 +180,7 @@ public class MyKMeans
                     moveCentroid(i, tempI[i]);
                     
                 }
+                m_ClusterSizes[i] = tempI[i].numInstances();
             }
             
             m_Iterations++;
@@ -221,6 +229,7 @@ public class MyKMeans
         if (m_ClusterCentroids == null) {
             return "No clusterer built yet!";
         }
+        
         StringBuffer temp = new StringBuffer();
         temp.append("\nMyKMeans\n======\n");
         
@@ -229,12 +238,11 @@ public class MyKMeans
         temp.append("\nMissing values globally replaced with mean/mode");
         
         temp.append("\n\nCluster centroids:\n");
-        //temp.append(m_ClusterCentroids.toString() + "\n\n");
+        
         for (int i = 0; i < m_ClusterCentroids.numInstances(); i++) {
-            temp.append("\nCluster " + i);
+            temp.append("\n- Cluster " + i + " (" + m_ClusterSizes[i] + " data) -");
             for (int j = 0; j < m_ClusterCentroids.numAttributes(); j++) {
                 temp.append("\n" + m_ClusterCentroids.instance(i).attribute(j).name());
-                //temp.append(": " + m_ClusterCentroids.instance(i).toString());
                 Attribute att = m_ClusterCentroids.instance(i).attribute(j);
                 if (att.isNominal() || att.isString() || att.isDate()) {
                     temp.append(": " + m_ClusterCentroids.instance(i).stringValue(j));
@@ -242,27 +250,10 @@ public class MyKMeans
                     temp.append(": " + m_ClusterCentroids.instance(i).value(j));
                 }
             }
+            temp.append("\n");
         }
         
-        
-        return temp.toString();
-    }
-    
-    private String pad(String source, String padChar, 
-                     int length, boolean leftPad) {
-        StringBuffer temp = new StringBuffer();
-
-        if (leftPad) {
-            for (int i = 0; i< length; i++) {
-                temp.append(padChar);
-            }
-            temp.append(source);
-        } else {
-            temp.append(source);
-            for (int i = 0; i< length; i++) {
-                temp.append(padChar);
-            }
-        }
+        temp.append("\n\n");
         return temp.toString();
     }
   
