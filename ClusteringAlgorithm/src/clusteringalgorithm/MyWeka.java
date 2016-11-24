@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.Scanner;
 import weka.clusterers.ClusterEvaluation;
 import weka.clusterers.Clusterer;
+import weka.clusterers.HierarchicalClusterer;
 import weka.clusterers.SimpleKMeans;
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -88,6 +89,11 @@ public class MyWeka {
         clusterer.buildClusterer(train);
     }
     
+    public void buildClustererHierarchical() throws Exception {
+        clusterer = new HierarchicalClusterer();
+        clusterer.buildClusterer(train);
+    }
+    
     public void buildClustererMyKMeans() throws Exception {
         clusterer = new MyKMeans(numClusters);
         clusterer.buildClusterer(train);
@@ -101,8 +107,6 @@ public class MyWeka {
     public void evaluateModel () throws Exception {
         eval = new ClusterEvaluation();
         eval.setClusterer(clusterer);
-//        System.out.println("----- clusterer -----");
-//        System.out.println(clusterer);
         eval.evaluateClusterer(test);
     }
     
@@ -194,8 +198,9 @@ public class MyWeka {
         while (option < 1 || option > 3) {
             System.out.println("\nClustering Algorithms:");
             System.out.println("1. WEKA's SimpleKMeans");
-            System.out.println("2. MyKMeans");
-            System.out.println("3. MyAgnes");
+            System.out.println("2. WEKA's HierarchicalClusterer");
+            System.out.println("3. MyKMeans");
+            System.out.println("4. MyAgnes");
             System.out.print("> Your option: ");
             option = input.nextInt();
             input.nextLine();
@@ -203,7 +208,7 @@ public class MyWeka {
         
         optCls = option;
         
-        if (optCls == 2) {
+        if (optCls == 3) {
             // ask for the number of clusters
             System.out.print("\n> Num of Clusters: ");
             int in = input.nextInt();
@@ -260,8 +265,10 @@ public class MyWeka {
         if(optCls == 1) {
             buildClustererSimpleKMeans();    
         } else if(optCls == 2) {
-            buildClustererMyKMeans();
+            buildClustererHierarchical();
         } else if(optCls == 3) {
+            buildClustererMyKMeans();
+        } else if(optCls == 4) {
             System.out.print("Jumlah cluster: ");
             int cluster = input.nextInt();
             System.out.print("Metode penentuan jarak (Single-0; Complete-1): ");
